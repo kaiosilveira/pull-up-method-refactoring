@@ -1,45 +1,10 @@
 [![Continuous Integration](https://github.com/kaiosilveira/pull-up-method-refactoring/actions/workflows/ci.yml/badge.svg)](https://github.com/kaiosilveira/pull-up-method-refactoring/actions/workflows/ci.yml)
 
-# Refactoring catalog repository template
-
-This is a quick template to help me get a new refactoring repo going.
-
-## Things to do after creating a repo off of this template
-
-1. Run `GITHUB_TOKEN=$(gh auth token) yarn tools:cli prepare-repository -r <repo_name>`. It will:
-
-- Update the `README.md` file with the actual repository name, CI badge, and commit history link
-- Update `package.json` with the repository's name and remote URL
-- Update the repo's homepage on GitHub with:
-  - A description
-  - A website link to https://github.com/kaiosilveira/refactoring
-  - The following labels: javascript, refactoring, pull-up-method-refactoring
-
-2. Replace the lorem ipsum text sections below with actual text
-
-## Useful commands
-
-- Generate markdown containing a diff with patch information based on a range of commits:
-
-```bash
-yarn tools:cli generate-diff -f <first_commit_sha> -l <last_commit_sha>
-```
-
-- To generate the commit history table for the last section, including the correct links:
-
-```bash
-yarn tools:cli generate-cmt-table -r pull-up-method-refactoring
-```
-
----
-
 ℹ️ _This repository is part of my Refactoring catalog based on Fowler's book with the same title. Please see [kaiosilveira/refactoring](https://github.com/kaiosilveira/refactoring) for more details._
 
 ---
 
 # Pull Up Method
-
-**Formerly: Old name**
 
 <table>
 <thead>
@@ -51,7 +16,15 @@ yarn tools:cli generate-cmt-table -r pull-up-method-refactoring
 <td>
 
 ```javascript
-result = initial.code;
+class Employee { ... }
+
+class Salesman extends Employee {
+  get name { ... }
+}
+
+class Engineer extends Employee {
+  get name { ... }
+}
 ```
 
 </td>
@@ -59,11 +32,13 @@ result = initial.code;
 <td>
 
 ```javascript
-result = newCode();
-
-function newCode() {
-  return 'new code';
+class Employee {
+  get name { ... }
 }
+
+class Salesman extends Employee { ... }
+
+class Engineer extends Employee { ... }
 ```
 
 </td>
@@ -71,58 +46,132 @@ function newCode() {
 </tbody>
 </table>
 
-**Inverse of: [Another refactoring](https://github.com/kaiosilveira/refactoring)**
+**Inverse of: [Push Down Method](https://github.com/kaiosilveira/push-down-method-refactoring)**
 
-**Refactoring introduction and motivation** dolore sunt deserunt proident enim excepteur et cillum duis velit dolor. Aute proident laborum officia velit culpa enim occaecat officia sunt aute labore id anim minim. Eu minim esse eiusmod enim nulla Lorem. Enim velit in minim anim anim ad duis aute ipsum voluptate do nulla. Ad tempor sint dolore et ullamco aute nulla irure sunt commodo nulla aliquip.
+Duplication shows up everywhere, sometimes subtly, sometimes shockingly. In the context of OO and class hierarchies, sometimes it's easy to let something that's implemented in another subclass go unnoticed and end up reimplementing it. This refactoring helps to clean that up.
 
 ## Working example
 
-**Working example general explanation** proident reprehenderit mollit non voluptate ea aliquip ad ipsum anim veniam non nostrud. Cupidatat labore occaecat labore veniam incididunt pariatur elit officia. Aute nisi in nulla non dolor ullamco ut dolore do irure sit nulla incididunt enim. Cupidatat aliquip minim culpa enim. Fugiat occaecat qui nostrud nostrud eu exercitation Lorem pariatur fugiat ea consectetur pariatur irure. Officia dolore veniam duis duis eu eiusmod cupidatat laboris duis ad proident adipisicing. Minim veniam consectetur ut deserunt fugiat id incididunt reprehenderit.
+Our working example is a simple program that contains a straightforward class hierarchy:
+
+```mermaid
+classDiagram
+    class Party
+    Party <|-- Employee
+    Party <|-- Department
+
+    class Employee {
+        get monthlyCost
+        get annualCost
+    }
+
+    class Department {
+        get monthlyCost
+        get totalAnnualCost
+    }
+```
+
+Our goal is to pull up the `annualCost` getter to `Party`, since they do the same thing.
 
 ### Test suite
 
-Occaecat et incididunt aliquip ex id dolore. Et excepteur et ea aute culpa fugiat consectetur veniam aliqua. Adipisicing amet reprehenderit elit qui.
+The test suite for the program covers the basic aspects and behaviors of the subclasses, in relation to the `annualCost` getter. An example is:
 
 ```javascript
-describe('functionBeingRefactored', () => {
-  it('should work', () => {
-    expect(0).toEqual(1);
+describe('Employee', () => {
+  it('should calculate the annual cost by multiplying the monthly cost by 12', () => {
+    const department = new Employee(10);
+    expect(department.annualCost).toEqual(120);
   });
 });
 ```
 
-Magna ut tempor et ut elit culpa id minim Lorem aliqua laboris aliqua dolor. Irure mollit ad in et enim consequat cillum voluptate et amet esse. Fugiat incididunt ea nulla cupidatat magna enim adipisicing consequat aliquip commodo elit et. Mollit aute irure consequat sunt. Dolor consequat elit voluptate aute duis qui eu do veniam laborum elit quis.
+For the full picture, please look up the source code.
 
 ### Steps
 
-**Step 1 description** mollit eu nulla mollit irure sint proident sint ipsum deserunt ad consectetur laborum incididunt aliqua. Officia occaecat deserunt in aute veniam sunt ad fugiat culpa sunt velit nulla. Pariatur anim sit minim sit duis mollit.
+Since our goal is to move the method to the `Party` superclass, we start by renaming `totalAnnualCost` to `annualCost` at `Department`:
 
 ```diff
-diff --git a/src/price-order/index.js b/src/price-order/index.js
-@@ -3,6 +3,11 @@
--module.exports = old;
-+module.exports = new;
+diff --git Department...
+export class Department extends Party {
+     this._monthlyCost = arg;
+   }
+-  get totalAnnualCost() {
++  get annualCost() {
+     return this.monthlyCost * 12;
+   }
+ }
 ```
 
-**Step n description** mollit eu nulla mollit irure sint proident sint ipsum deserunt ad consectetur laborum incididunt aliqua. Officia occaecat deserunt in aute veniam sunt ad fugiat culpa sunt velit nulla. Pariatur anim sit minim sit duis mollit.
+This move makes the name uniform across subclasses, and prepare the stage for the subsequent moves.
+
+Continuing, we now add `annualCost` to `Party`:
 
 ```diff
-diff --git a/src/price-order/index.js b/src/price-order/index.js
-@@ -3,6 +3,11 @@
--module.exports = old;
-+module.exports = new;
+diff --git Party...
+export class Party {
++  get annualCost() {
++    return this.monthlyCost * 12;
++  }
+}
 ```
 
-And that's it!
+And now the migration can start. We remove `annualCost` from `Department`:
+
+```diff
+diff --git Department...
+export class Department extends Party {
+-  get annualCost() {
+-    return this.monthlyCost * 12;
+-  }
+ }
+```
+
+and do the same for `Employee`:
+
+```diff
+diff --git Employee...
+export class Employee extends Party {
+-  get annualCost() {
+-    return this.monthlyCost * 12;
+-  }
+ }
+```
+
+And that's all for the refactoring. As a last bit of cautious, we can include some protections against `monthlyCost` being possibly `undefined` at `Party`:
+
+```diff
++++ b/src/party/index.js
+@@ -1,5 +1,16 @@
++export class SubclassResponsibilityError extends Error {
++  constructor() {
++    super('This should be implemented by a subclass');
++    this.name = 'SubclassResponsibilityError';
++  }
++}
+
+ export class Party {
++  get monthlyCost() {
++    throw new SubclassResponsibilityError();
++  }
+ }
+```
+
+This will force clients, at development time, to be mindful of the existing dependency.
+
+That's all!
 
 ### Commit history
 
 Below there's the commit history for the steps detailed above.
 
-| Commit SHA                                                                  | Message                  |
-| --------------------------------------------------------------------------- | ------------------------ |
-| [cmt-sha-1](https://github.com/kaiosilveira/pull-up-method-refactoring/commit-SHA-1) | description of commit #1 |
-| [cmt-sha-2](https://github.com/kaiosilveira/pull-up-method-refactoring/commit-SHA-2) | description of commit #2 |
-| [cmt-sha-n](https://github.com/kaiosilveira/pull-up-method-refactoring/commit-SHA-n) | description of commit #n |
+| Commit SHA                                                                                                            | Message                                                      |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [3b783d9](https://github.com/kaiosilveira/pull-up-method-refactoring/commit/3b783d9ac88cedc5824f39f255392ec02c98c0dd) | rename `totalAnnualCost` to `annualCost` at `Department`     |
+| [4d22ed9](https://github.com/kaiosilveira/pull-up-method-refactoring/commit/4d22ed99732a2dd2e0ed5f6e9bbaaa3c66e80d41) | add `annualCost` to `Party`                                  |
+| [f7f21b9](https://github.com/kaiosilveira/pull-up-method-refactoring/commit/f7f21b9c9724264dec1b6973e48294e3c9ef3048) | remove `annualCost` from `Department`                        |
+| [f422cb6](https://github.com/kaiosilveira/pull-up-method-refactoring/commit/f422cb69b7144e3619a090c5ed96de7481f263ed) | remove `annualCost` from `Employee`                          |
+| [ba7af7a](https://github.com/kaiosilveira/pull-up-method-refactoring/commit/ba7af7a057dfd473e0ffc6b7a26f399ad2e77f69) | add a protection against undefined `monthlyCost`s at `Party` |
 
 For the full commit history for this project, check the [Commit History tab](https://github.com/kaiosilveira/pull-up-method-refactoring/commits/main).
