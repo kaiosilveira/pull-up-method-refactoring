@@ -13,8 +13,4 @@ export class Employee extends Party {
   set monthlyCost(arg) {
     this._monthlyCost = arg;
   }
-
-  get annualCost() {
-    return this.monthlyCost * 12;
-  }
 }
